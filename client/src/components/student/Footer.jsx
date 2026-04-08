@@ -1,4 +1,4 @@
-import React from 'react';
+//import React from 'react';
 import { assets } from '../../assets/assets';
 
 const Footer = () => {
@@ -36,7 +36,7 @@ const Footer = () => {
 
       </div>
       <p className="py-4 text-center text-xs md:text-sm text-white/60">
-        Copyright 2024 © GreatStack. All Right Reserved.
+        Copyright 2026 © Lalit-byte. All Right Reserved.
       </p>
     </footer>
   );
