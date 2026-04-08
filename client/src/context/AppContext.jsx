@@ -1,95 +1,162 @@
-import {createContext , useState, useEffect} from 'react';
-import App from '../App';
-import {dummyCourses} from '../assets/assets';
-import { useNavigate } from 'react-router-dom';
-import humanizeDuration from 'humanize-duration';
+import  axios from "axios";
+import { createContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useAuth, useUser } from "@clerk/clerk-react";
+import humanizeDuration from "humanize-duration";
 
-export const AppContext = createContext();
-
+export const AppContext = createContext()
 
 export const AppContextProvider = (props) => {
- 
-    const currency = import.meta.env.VITE_CURRENCY // '$'
 
-    const navigate = useNavigate();
+    const backendUrl = import.meta.env.VITE_BACKEND_URL
+    const currency = import.meta.env.VITE_CURRENCY
 
-   const {getToken} = useAuth()
-    const {user} = useUser()
+    const navigate = useNavigate()
+    const { getToken } = useAuth()
+    const { user } = useUser()
 
-
-    const [allCourses, setAllCourses] = useState([]) 
-    const [isEducator, setIsEducator] = useState(true) 
+    const [showLogin, setShowLogin] = useState(false)
+    const [isEducator,setIsEducator] = useState(false)
+    const [allCourses, setAllCourses] = useState([])
+    const [userData, setUserData] = useState(null)
     const [enrolledCourses, setEnrolledCourses] = useState([])
 
-    // Fetch all courses 
-    const fetchAllCourses = async ()=> {
-        setAllCourses(dummyCourses) 
+    // Fetch All Courses
+    const fetchAllCourses = async () => {
+
+        try {
+
+            const { data } = await axios.get(backendUrl + '/api/course/all');
+
+            if (data.success) {
+                setAllCourses(data.courses)
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            toast.error(error.message)
+        }
+
     }
 
-    //Function to calculate average rating of a course
+    // Fetch UserData 
+    const fetchUserData = async () => {
+
+        try {
+
+            if (user.publicMetadata.role === 'educator') {
+                setIsEducator(true)
+            }
+
+            const token = await getToken();
+
+            const { data } = await axios.get(backendUrl + '/api/user/data',
+                { headers: { Authorization: `Bearer ${token}` } })
+
+            if (data.success) {
+                setUserData(data.user)
+            } else (
+                toast.error(data.message)
+            )
+
+        } catch (error) {
+            toast.error(error.message)
+        }
+
+    }
+
+    // Fetch User Enrolled Courses
+    const fetchUserEnrolledCourses = async () => {
+        try{
+            const token = await getToken();
+
+            const { data } = await axios.get(backendUrl + '/api/user/enrolled-courses',
+            { headers: { Authorization: `Bearer ${token}` } })
+
+            if (data.success) {
+            setEnrolledCourses(data.enrolledCourses.reverse())
+            } else{
+            toast.error(data.message)
+           }
+
+        }catch (error){
+            toast.error(error.message)
+        }
+    }
+
+    // Function to Calculate Course Chapter Time
+    const calculateChapterTime = (chapter) => {
+
+        let time = 0
+
+        chapter.chapterContent.map((lecture) => time += lecture.lectureDuration)
+
+        return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
+
+    }
+
+    // Function to Calculate Course Duration
+    const calculateCourseDuration = (course) => {
+
+        let time = 0
+
+        course.courseContent.map(
+            (chapter) => chapter.chapterContent.map(
+                (lecture) => time += lecture.lectureDuration
+            )
+        )
+
+        return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
+
+    }
 
     const calculateRating = (course) => {
-        if(course.courseRatings.length === 0) return 0;
-        let totalRating = 0 ;
-        course.courseRatings.forEach(rating =>{
+
+        if (course.courseRatings.length === 0) {
+            return 0
+        }
+
+        let totalRating = 0
+        course.courseRatings.forEach(rating => {
             totalRating += rating.rating
         })
-        return totalRating / course.courseRatings.length ;
-    }
-  
-    //function to calculate course chapter time
-    const calculateChapterTime = (chapter) => {
-        let time = 0
-        chapter.chapterContent.map((lecture)=> time += lecture.lectureDuration)
-        return humanizeDuration(time * 60 * 1000, { units: ['h', 'm']})  
+        return Math.floor(totalRating / course.courseRatings.length)
     }
 
-    //function to calculate total course duration
-    const calculateCourseDuration = (course)=>{
-        let time = 0
-        course.courseContent.map((chapter)=> chapter.chapterContent.map(
-            (lecture)=> time += lecture.lectureDuration ))
-        return humanizeDuration(time * 60 * 1000, { units: ['h', 'm']})  
-
-    }
-
-    //function to calculate No. of lectures in a course
-     const calculateNoOfLectures = (course) => {
+    const calculateNoOfLectures = (course) => {
         let totalLectures = 0;
         course.courseContent.forEach(chapter => {
             if (Array.isArray(chapter.chapterContent)) {
                 totalLectures += chapter.chapterContent.length;
             }
-        });
+        }); 
         return totalLectures;
     }
 
-    //fetch user enrolled courses
 
-    const fetchUserEnrolledCourses = async () => {
-        setEnrolledCourses(dummyCourses)
-    }
-
-      useEffect(()=>{
+    useEffect(() => {
         fetchAllCourses()
-        fetchUserEnrolledCourses()
-    },[])
+    }, [])
 
-    const logToken = async ()=>{
-        console.log(await getToken());
-    }
-
-    useEffect(()=>{
-        if (user){
-            logToken()
+    // Fetch User's Data if User is Logged In
+    useEffect(() => {
+        if (user) {
+            fetchUserData()
+            fetchUserEnrolledCourses()
         }
-    },[user])
-    
+    }, [user])
+
     const value = {
-        currency, allCourses , navigate , calculateRating,
-        isEducator, setIsEducator , calculateNoOfLectures, calculateCourseDuration,
-        calculateChapterTime , enrolledCourses, fetchUserEnrolledCourses
+        showLogin, setShowLogin,
+        backendUrl, currency, navigate,
+        userData, setUserData, getToken,
+        allCourses, fetchAllCourses,
+        enrolledCourses, fetchUserEnrolledCourses,
+        calculateChapterTime, calculateCourseDuration,
+        calculateRating, calculateNoOfLectures,
+        isEducator,setIsEducator
     }
 
     return (
@@ -97,4 +164,5 @@ export const AppContextProvider = (props) => {
             {props.children}
         </AppContext.Provider>
     )
+
 }

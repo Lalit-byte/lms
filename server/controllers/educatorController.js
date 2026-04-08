@@ -1,8 +1,10 @@
-import { clerkClient } from '@clerk/express';
-import Course from "../models/Course.js"
-import {v2 as cloudinary} from 'cloudinary'
+import { v2 as cloudinary } from 'cloudinary'
+import Course from '../models/Course.js';
+import { Purchase } from '../models/Purchase.js';
+import User from '../models/User.js';
+import { clerkClient } from '@clerk/express'
 
-//update role to educator -->>
+// update role to educator
 export const updateRoleToEducator = async (req, res) => {
 
     try {
@@ -157,4 +159,3 @@ export const getEnrolledStudentsData = async (req, res) => {
         });
     }
 };
- 

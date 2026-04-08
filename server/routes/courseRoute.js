@@ -10,5 +10,5 @@ courseRouter.get('/all', getAllCourse)
 // Get Course Data By Id
 courseRouter.get('/:id', getCourseId)
 
- 
+
 export default courseRouter;

@@ -25,8 +25,7 @@ export const getUserData = async (req, res) => {
     }
 }
 
-
-// Purchase Course ---Using Stripe Payment Gateway  
+// Purchase Course 
 export const purchaseCourse = async (req, res) => {
 
     try {
